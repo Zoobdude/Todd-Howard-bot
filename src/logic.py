@@ -11,5 +11,8 @@ def put_quotes_around_random_word(input_message: str) -> str:
     
     return " ".join(input_message_list)
 
-if __name__ == "__main__":
-    print(put_quotes_around_random_word(input("Enter a message: ")))
+def true_false_random(bias: float = 0.7) -> bool:
+    if random.random() < bias:
+        return True
+    else:
+        return False
