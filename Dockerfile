@@ -1,4 +1,4 @@
-FROM python:slim
+FROM python:3.11-slim
 
 COPY ./src/logic.py /logic.py
 COPY ./src/requirements.txt /requirements.txt
