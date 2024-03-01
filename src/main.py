@@ -20,14 +20,22 @@ bot = discord.Bot(intents=intents)
 
 config_db = TinyDB("data/ToddBotConfig.json")
 
+#--------------------------------------------------------------------------------
+# Update the database to include new "channel specific frequency"
+for item in config_db:
+    if 'channel_frequency' not in item:
+        config_db.update({'specific_channel_frequency': {}}, doc_ids=[item.doc_id])
+#--------------------------------------------------------------------------------
+
 @bot.event
 async def on_ready():
     print(f'Sucsessfully logged in as {bot.user}')
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="you and mocking you"))
 
 @bot.event
 async def on_guild_join(guild):
     print(f"Joined {guild.name} with {guild.member_count} members")
-    config_db.insert({"guild_id": guild.id, "frequency": 0.1, "disabled_channels": []})
+    config_db.insert({"guild_id": guild.id, "frequency": 0.1, "disabled_channels": [], "specific_channel_frequency": {}})
 
 @bot.event
 async def on_guild_remove(guild):
@@ -45,7 +53,10 @@ async def on_message(message):
         # Bot is disabled in this channel
         return
     
-    frequency_bias = config_db.search(where("guild_id") == message.guild.id)[0]["frequency"]
+    if message.channel.id in config_db.search(where("guild_id") == message.guild.id)[0]["specific_channel_frequency"]:
+        frequency_bias = config_db.search(where("guild_id") == message.guild.id)[0]["specific_channel_frequency"][message.channel.id]
+    else:
+        frequency_bias = config_db.search(where("guild_id") == message.guild.id)[0]["frequency"]
     
     if not true_false_random(frequency_bias):
         # Decided not to respond
@@ -56,7 +67,6 @@ async def on_message(message):
     await message.channel.send(response)
         
 
-#Disable in specific channel slash command
 @bot.command(description="Disable the bot in a specific channel")
 async def disable(ctx):
     if not ctx.author.guild_permissions.administrator:
@@ -70,8 +80,6 @@ async def disable(ctx):
     current_disabled_channels = config_db.search(where("guild_id") == ctx.guild.id)[0]["disabled_channels"]
     current_disabled_channels.append(ctx.channel.id)
     config_db.update({"disabled_channels": current_disabled_channels}, where("guild_id") == ctx.guild.id)
-        
-    print(f"Disabled the bot in {ctx.channel.name}")
     
     await ctx.respond(f"Disabled the bot in {ctx.channel.name}", ephemeral=True)
 
@@ -94,8 +102,8 @@ async def enable(ctx):
     await ctx.respond(f"Enabled the bot in {ctx.channel.name}", ephemeral=True)
 
 
-@bot.command(description="Set the frequency of the bot's responses")
-async def set_frequency(ctx, freq: float):
+@bot.command(description="Set the global frequency of the bot's responses")
+async def set_global_frequency(ctx, freq: float):
     if not ctx.author.guild_permissions.administrator:
         await ctx.respond("You do not have permission to do that!")
         return
@@ -105,6 +113,33 @@ async def set_frequency(ctx, freq: float):
         return
 
     config_db.update({"frequency": freq}, where("guild_id") == ctx.guild.id)
+    await ctx.respond(f"Set the frequency to {freq}", ephemeral=True)
+
+@bot.command(description="Set the frequency of the bot's responses in a specific channel (set to -1 to put it back to server default)")
+async def set_channel_frequency(ctx, freq: float):
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.respond("You do not have permission to do that!")
+        return
+    
+    channel_frequency = config_db.get(where("guild_id") == ctx.guild.id)["specific_channel_frequency"]
+    
+    if freq == -1:
+        if ctx.channel.id in channel_frequency:
+            channel_frequency.remove(ctx.channel.id)
+            config_db.update({"specific_channel_frequency": channel_frequency}, where("guild_id") == ctx.guild.id)
+            await ctx.respond(f"Set the frequency to server default", ephemeral=True)
+            return
+        
+        else:
+            await ctx.respond("The frequency is already set to server default", ephemeral=True)
+            return
+    
+    if freq < 0 or freq > 1:
+        await ctx.respond("Frequency must be between 0 and 1", ephemeral=True)
+        return
+
+    channel_frequency[ctx.channel.id] = freq
+    config_db.update({"specific_channel_frequency": channel_frequency}, where("guild_id") == ctx.guild.id)
     await ctx.respond(f"Set the frequency to {freq}", ephemeral=True)
 
     
