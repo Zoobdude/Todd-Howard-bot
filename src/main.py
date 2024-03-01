@@ -115,7 +115,7 @@ async def set_global_frequency(ctx, freq: float):
     config_db.update({"frequency": freq}, where("guild_id") == ctx.guild.id)
     await ctx.respond(f"Set the frequency to {freq}", ephemeral=True)
 
-@bot.command(description="Set the frequency of the bot's responses in a specific channel (set to -1 to put it back to server default)")
+@bot.command(description="Set the frequency of the bot's responses in a specific channel (-1 to set back to server default)")
 async def set_channel_frequency(ctx, freq: float):
     if not ctx.author.guild_permissions.administrator:
         await ctx.respond("You do not have permission to do that!")
