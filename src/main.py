@@ -47,14 +47,16 @@ async def on_message(message):
         # Bot's own message therefore do nothing
         return
 
-    if message.channel.id in config_db.search(where("guild_id") == message.guild.id)[0]["disabled_channels"]:
+    if message.channel.id in config_db.get(where("guild_id") == message.guild.id)["disabled_channels"]:
         # Bot is disabled in this channel
         return
     
-    if message.channel.id in config_db.search(where("guild_id") == message.guild.id)[0]["specific_channel_frequency"]:
-        frequency_bias = config_db.search(where("guild_id") == message.guild.id)[0]["specific_channel_frequency"][message.channel.id]
+    if str(message.channel.id) in config_db.get(where("guild_id") == message.guild.id)["specific_channel_frequency"]:
+        frequency_bias = config_db.get(where("guild_id") == message.guild.id)["specific_channel_frequency"][str(message.channel.id)]
+
     else:
-        frequency_bias = config_db.search(where("guild_id") == message.guild.id)[0]["frequency"]
+        frequency_bias = config_db.get(where("guild_id") == message.guild.id)["frequency"]
+
     
     if not true_false_random(frequency_bias):
         # Decided not to respond
@@ -122,8 +124,8 @@ async def set_channel_frequency(ctx, freq: float):
     channel_frequency = config_db.get(where("guild_id") == ctx.guild.id)["specific_channel_frequency"]
     
     if freq == -1:
-        if ctx.channel.id in channel_frequency:
-            channel_frequency.remove(ctx.channel.id)
+        if str(ctx.channel.id) in channel_frequency:
+            channel_frequency.pop(str(ctx.channel.id))
             config_db.update({"specific_channel_frequency": channel_frequency}, where("guild_id") == ctx.guild.id)
             await ctx.respond(f"Set the frequency to server default", ephemeral=True)
             return
@@ -136,7 +138,7 @@ async def set_channel_frequency(ctx, freq: float):
         await ctx.respond("Frequency must be between 0 and 1", ephemeral=True)
         return
 
-    channel_frequency[ctx.channel.id] = freq
+    channel_frequency[str(ctx.channel.id)] = freq
     config_db.update({"specific_channel_frequency": channel_frequency}, where("guild_id") == ctx.guild.id)
     await ctx.respond(f"Set the frequency to {freq}", ephemeral=True)
 
