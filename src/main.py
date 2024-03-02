@@ -21,10 +21,8 @@ bot = discord.Bot(intents=intents)
 config_db = TinyDB("data/ToddBotConfig.json")
 
 #--------------------------------------------------------------------------------
-# Update the database to include new "channel specific frequency"
-for item in config_db:
-    if 'channel_frequency' not in item:
-        config_db.update({'specific_channel_frequency': {}}, doc_ids=[item.doc_id])
+#DB updates
+
 #--------------------------------------------------------------------------------
 
 @bot.event
